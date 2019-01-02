@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class TodoListViewController: UITableViewController{
+class TodoListViewController: SwipeTableViewController{
     
     var items: Results<Item>?
     
@@ -31,16 +31,12 @@ class TodoListViewController: UITableViewController{
     
     //cells should display
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        //let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+           cell.textLabel?.text = items?[indexPath.row].title ?? "No Items Added"
+            
+           //cell.accessoryType = item.done ? .checkmark : .none
         
-        if let item = items?[indexPath.row] {
-            
-            cell.textLabel?.text = item.title
-            
-            cell.accessoryType = item.done ? .checkmark : .none
-        } else {
-            cell.textLabel?.text = "No Items Added"
-        }
         
         return cell
     }
@@ -58,7 +54,7 @@ class TodoListViewController: UITableViewController{
         if let item = items?[indexPath.row] {
             do {
                 try realm.write {
-//                    realm.delete(item)
+                    //                    realm.delete(item)
                     item.done = !item.done
                 }
             } catch {
@@ -70,7 +66,17 @@ class TodoListViewController: UITableViewController{
         
         tableView.deselectRow(at: indexPath, animated: true) //does not leave cell grey when clicked, goes back to white
     }
-    
+    override func updateModel(at indexPath: IndexPath) {
+        if let itemToDelete = self.items?[indexPath.row]{
+            do{
+                try realm.write {
+                    realm.delete(itemToDelete)
+                }
+            } catch {
+                print("Error deleting item, \(error)")
+            }
+        }
+    }
     //MARK - Add New Items
     //Create item
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
@@ -124,12 +130,12 @@ class TodoListViewController: UITableViewController{
 
 //MARK: - Search bar methods
 extension TodoListViewController: UISearchBarDelegate {
-
+    
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         items = items?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
         tableView.reloadData()
     }
-
+    
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
@@ -137,7 +143,7 @@ extension TodoListViewController: UISearchBarDelegate {
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
-
+            
         }
     }
 }
