@@ -11,7 +11,7 @@ import CoreData
 
 class CategoryViewController: UITableViewController {
 
-    var categoryArray: [Category]()
+    var categoryArray = [Category]()
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,6 +21,9 @@ class CategoryViewController: UITableViewController {
     }
     
     //MARK: - TableView Datasource Methods
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return categoryArray.count
+    }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
@@ -35,7 +38,7 @@ class CategoryViewController: UITableViewController {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (UIAlertAction) in
-            let newCategory = Category()
+            let newCategory = Category(context: self.context)
             newCategory.name = textField.text
             self.categoryArray.append(newCategory)
             
@@ -62,6 +65,7 @@ class CategoryViewController: UITableViewController {
         self.tableView.reloadData()
     }
     func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest()){
+        let request : NSFetchRequest<Category> = Category.fetchRequest()
         do {
             try categoryArray = context.fetch(request)
         } catch {
@@ -71,4 +75,14 @@ class CategoryViewController: UITableViewController {
     }
     
     //MARK: - TableView Delegate Methods
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        performSegue(withIdentifier: "goToItems", sender: self)
+    }
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let destinationVC = segue.destination as! TodoListViewController
+        
+        if let indexPath = tableView.indexPathForSelectedRow {
+            destinationVC.selectedCategory = categoryArray[indexPath.row]
+        }
+    }
 }
