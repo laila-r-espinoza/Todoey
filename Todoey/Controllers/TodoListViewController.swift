@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController{
     
@@ -21,22 +22,61 @@ class TodoListViewController: SwipeTableViewController{
         }
     }
     
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+        tableView.separatorStyle = .none
+        //print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        guard let colorHex = selectedCategory?.hexString else {fatalError()}
+        
+        title = selectedCategory!.name
+        
+        updateNavBar(withHexCode: colorHex)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "76D6FF")
+    }
+    //MARK - Nav Bar Setup code methods
+    func updateNavBar(withHexCode colorHexCode: String) {
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation controller does not exist")}
+        guard let navBarColor = UIColor(hexString: colorHexCode) else {fatalError()}
+        
+        navBar.barTintColor = navBarColor
+        
+        searchBar.barTintColor = navBarColor
+        
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navBarColor, returnFlat: true)]
+    }
     //MARK - Tableview Datasource Methods
     
     //cells should display
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        //let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        let cell = super.tableView(tableView, cellForRowAt: indexPath)
-           cell.textLabel?.text = items?[indexPath.row].title ?? "No Items Added"
-            
-           //cell.accessoryType = item.done ? .checkmark : .none
         
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
+        if let item = items?[indexPath.row] {
+            cell.textLabel?.text = item.title
+            
+            if let color = UIColor(hexString: selectedCategory!.hexString)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(items!.count)){
+                
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                
+            }
+            
+            cell.accessoryType = item.done ? .checkmark : .none
+            
+        } else {
+            cell.textLabel?.text = "No Items Added"
+        }
         
         return cell
     }
@@ -54,7 +94,6 @@ class TodoListViewController: SwipeTableViewController{
         if let item = items?[indexPath.row] {
             do {
                 try realm.write {
-                    //                    realm.delete(item)
                     item.done = !item.done
                 }
             } catch {
@@ -111,8 +150,6 @@ class TodoListViewController: SwipeTableViewController{
         alert.addAction(action)
         
         present(alert, animated: true, completion: nil)
-        
-        
     }
     
     //MARK - Model Manipulation Methods
@@ -120,11 +157,9 @@ class TodoListViewController: SwipeTableViewController{
     //gets data that is in database, Read items
     func loadItems() {
         items = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
-        items = realm.objects(Item.self)
+        //items = realm.objects(Item.self) //set all the items to be in each category
         tableView.reloadData()
     }
-    
-    
     
 }
 
@@ -135,7 +170,6 @@ extension TodoListViewController: UISearchBarDelegate {
         items = items?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
         tableView.reloadData()
     }
-    
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
